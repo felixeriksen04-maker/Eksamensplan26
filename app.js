@@ -1,7 +1,9 @@
-// Ukeplan mot JUUL: viser planen dag for dag. Ingen logg eller kontroll.
+// Ukeplan mot JUUL: viser fag og timer per dag fra plan.js.
 (function () {
   "use strict";
   var P = window.PLAN;
+  var UKEDAG = ["Søndag", "Mandag", "Tirsdag", "Onsdag", "Torsdag", "Fredag", "Lørdag"];
+  var MND = ["jan.", "feb.", "mars", "april", "mai", "juni", "juli", "aug.", "sep.", "okt.", "nov.", "des."];
 
   function to(n) {
     return (n < 10 ? "0" : "") + n;
@@ -9,68 +11,66 @@
   function iso(d) {
     return d.getFullYear() + "-" + to(d.getMonth() + 1) + "-" + to(d.getDate());
   }
-  function leggTil(dato, n) {
-    var d = new Date(dato + "T12:00:00");
-    d.setDate(d.getDate() + n);
-    return iso(d);
+  function dato(s) {
+    return new Date(s + "T12:00:00");
   }
-  function cap(s) {
-    return s.charAt(0).toUpperCase() + s.slice(1);
+  function kortDato(s) {
+    var d = dato(s);
+    return d.getDate() + ". " + MND[d.getMonth()];
   }
-  function fmtDag(dato) {
-    return cap(new Date(dato + "T12:00:00").toLocaleDateString("nb-NO", { weekday: "long", day: "numeric", month: "long" }));
+  function ukedag(s) {
+    return UKEDAG[dato(s).getDay()];
   }
-  function fmtMin(min) {
-    if (!min) return "0 min";
-    var t = Math.floor(min / 60), m = min % 60;
-    return (t ? t + " t" : "") + (t && m ? " " : "") + (m ? m + " min" : "");
+  function timer(t) {
+    return String(t).replace(".", ",") + " t";
   }
   function esc(s) {
-    return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {
+    return String(s).replace(/[&<>"']/g, function (c) {
       return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
     });
   }
-  function temaNavn(id) {
-    for (var i = 0; i < P.temaer.length; i++) {
-      if (P.temaer[i].id === id) return P.temaer[i].navn;
-    }
-    return "";
+
+  function fagListe() {
+    return '<ul class="fag">' + Object.keys(P.fag).map(function (k) {
+      var f = P.fag[k];
+      var hva = f.lenke ? '<a href="' + esc(f.lenke) + '">' + esc(f.hva) + "</a>" : esc(f.hva);
+      return '<li><span class="prikk" style="background:' + f.farge + '"></span><b>' + esc(f.navn) + "</b>" +
+        '<span class="hva">' + hva + '</span><span class="eks">Eksamen ' + ukedag(f.eksamen).toLowerCase() + " " + kortDato(f.eksamen) + "</span></li>";
+    }).join("") + "</ul>";
   }
 
-  function okt(s) {
-    var f = P.fag[s.fag];
-    var type = s.type === "prove" ? "Prøve" : s.type === "repetisjon" ? "Repetisjon" : "";
-    var temaer = s.temaer.map(temaNavn).filter(Boolean).join(", ");
-    var sub = [f.navn, type, temaer].filter(Boolean).join(" · ");
-    return '<article class="kort" style="border-left-color:' + f.farge + '">' +
-      '<div class="kortrad"><strong>' + esc(s.navn) + '</strong><span class="planlagt">' + fmtMin(s.min) + "</span></div>" +
-      '<div class="sub">' + esc(sub) + "</div></article>";
+  function dagRad(d, iDag) {
+    var t = d.timer || {};
+    var fag = Object.keys(t);
+    var sum = fag.reduce(function (a, k) { return a + t[k]; }, 0);
+    var klasser = ["dag"];
+    if (d.dato === iDag) klasser.push("idag");
+    if (d.dato < iDag) klasser.push("forbi");
+    var chips = "";
+    if (d.eksamen) {
+      var e = P.fag[d.eksamen];
+      chips += '<span class="chip eksamen">Eksamen ' + esc(e.navn) + (e.tid ? " " + esc(e.tid) : "") + "</span>";
+    }
+    chips += fag.map(function (k) {
+      return '<span class="chip" style="background:' + P.fag[k].farge + '">' + esc(P.fag[k].navn) + " " + timer(t[k]) + "</span>";
+    }).join("");
+    if (d.merk) chips += '<span class="merk">' + esc(d.merk) + "</span>";
+    return '<li class="' + klasser.join(" ") + '"' + (d.dato === iDag ? ' id="idag"' : "") + ">" +
+      '<div class="dato"><b>' + ukedag(d.dato) + "</b>" + kortDato(d.dato) + "</div>" +
+      '<div class="chips">' + chips + "</div>" +
+      '<div class="sum">' + (sum ? timer(sum) : "") + "</div></li>";
   }
 
   function render() {
-    var teller = P.eksamener.map(function (e) {
-      return '<span class="pille" style="background:' + P.fag[e.fag].farge + '">' + esc(e.navn) + " " + esc(e.dato.slice(8) + "." + e.dato.slice(5, 7) + ".") + "</span>";
-    }).join("");
-    var html = '<div class="teller">' + teller + "</div>";
-    for (var d = P.startdato; d <= P.sluttdato; d = leggTil(d, 1)) {
-      (function (dato) {
-        var ses = P.sesjoner.filter(function (s) { return s.dato === dato; });
-        var eks = P.eksamener.filter(function (e) { return e.dato === dato; });
-        var fast = P.faste.filter(function (f) { return f.dato === dato; });
-        var sum = ses.reduce(function (s, x) { return s + x.min; }, 0);
-        html += '<div class="dag"><div class="dagtittel"><h2>' + esc(fmtDag(dato)) + '</h2><span class="sum">' +
-          fmtMin(sum) + " planlagt</span></div>";
-        eks.forEach(function (e) {
-          html += '<div class="fast eksamen">Eksamen: ' + esc(e.navn) + " (" + esc(e.kode) + ") · " + esc(e.tid) + "</div>";
-        });
-        fast.forEach(function (f) {
-          html += '<div class="fast">' + esc(f.tid) + " · " + esc(f.tekst) + "</div>";
-        });
-        html += ses.map(okt).join("");
-        html += "</div>";
-      })(d);
-    }
-    document.getElementById("dager").innerHTML = html;
+    var iDag = iso(new Date());
+    var html = fagListe();
+    P.uker.forEach(function (u) {
+      var dager = P.dager.filter(function (d) { return d.dato >= u.fra && d.dato <= u.til; });
+      html += "<h2>" + esc(u.navn) + '</h2><ol class="dager">' + dager.map(function (d) { return dagRad(d, iDag); }).join("") + "</ol>";
+    });
+    document.getElementById("plan").innerHTML = html;
+    var idag = document.getElementById("idag");
+    if (idag) idag.scrollIntoView({ block: "center" });
   }
 
   render();
