@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="no">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Felix · Ukeplan mot JUUL</title>
+<meta name="theme-color" content="#14213D">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Ukeplan">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+<link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header>
+<div class="topp">
+<img class="avatar" src="icons/icon-192.png" alt="">
+<h1>Felix · Ukeplan mot JUUL</h1>
+</div>
+<nav>
+<button type="button" data-tab="dager" class="aktiv">Dager</button>
+<button type="button" data-tab="kontroll">Kontroll</button>
+<button type="button" data-tab="oversikt">Oversikt</button>
+<button type="button" data-tab="synk">GitHub</button>
+</nav>
+</header>
+<main>
+<section id="dager"></section>
+<section id="kontroll" hidden></section>
+<section id="oversikt" hidden></section>
+<section id="synk" hidden></section>
+</main>
+<script src="plan.js" charset="utf-8"></script>
+<script src="app.js" charset="utf-8"></script>
+<script src="sync.js" charset="utf-8"></script>
+</body>
+</html>
